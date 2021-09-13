@@ -31,6 +31,12 @@ app.use(cors())
 app.use(express.json())
 app.use(logger('dev'))
 
+const unknownPage = (req, res, next) => {
+    res.status(404).json(
+        {error : 'Requested resource not found'}
+    )
+}
+
 function findPerson(request) {
     const id = Number(request.params.id)
 
@@ -119,6 +125,8 @@ app.delete('/api/persons/:id', (request, response, next) => {
         response.status(404).send()
     }
 })
+
+app.use(unknownPage)
 
 app.listen(PORT, () => {
     console.log(`Listening on port: ${PORT}`)
