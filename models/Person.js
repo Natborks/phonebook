@@ -1,19 +1,20 @@
 const mongoose = require('mongoose')
-var uniqueValidator = require('mongoose-unique-validator');
-mongoose.set('runValidators', true);
+var uniqueValidator = require('mongoose-unique-validator')
+mongoose.set('runValidators', true)
 require('dotenv').config()
 
+// eslint-disable-next-line no-undef
 const url = process.env.MONGODB_URI
 
 console.log('connecting to ', url)
 
 mongoose.connect(url)
-.then(result => {
-    console.log('connection successful')
-})
-.catch(err => {
-    console.log(err.message)
-})
+    .then(() => {
+        console.log('connection successful')
+    })
+    .catch(err => {
+        console.log(err.message)
+    })
 
 
 const PersonSchema = new mongoose.Schema({

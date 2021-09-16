@@ -4,6 +4,7 @@ const app = express()
 const logger = require('morgan')
 const cors = require('cors')
 const Person = require('./models/Person')
+// eslint-disable-next-line no-undef
 const PORT = process.env.PORT
 
 
@@ -11,18 +12,18 @@ app.use(cors())
 app.use(express.json())
 app.use(logger('dev'))
 
-const unknownPage = (req, res, next) => {
+const unknownPage = (_req, res) => {
     res.status(404).json(
         {error : 'Requested resource not found'}
     )
 }
 
-const errorHandler = (error, request, response, next) => {
+const errorHandler = (error, _request, response, next) => {
     console.log(error)
 
     if(error.name === 'CastError'){
         return response.status(400).json({
-            error : "malformatted Id"
+            error : 'malformatted Id'
         })
     } else if(error.name === 'ValidationError') {
         return response.status(400).json({error : error.message})
@@ -32,17 +33,18 @@ const errorHandler = (error, request, response, next) => {
 }
 
 
-app.get('/api/persons', (request, response, next) => {
+app.get('/api/persons', (_request, response) => {
     Person.find({})
-    .then(result => {
-        return response.json(result)
-    })
+        .then(result => {
+            return response.json(result)
+        })
 
 })
 
-app.get('/api/info', (request, response, next) => {
-    const res = `Phonebook has info for people` + '\n ' + new Date()
-    response.send(res);
+app.get('/api/info', (_request, response) => {
+
+    const res = 'Phonebook has info for people' + '\n ' + new Date()
+    response.send(res)
 })
 
 app.get('/api/persons/:id', (request, response, next) => {
@@ -102,7 +104,7 @@ app.delete('/api/persons/:id', (request, response, next) => {
     const id = request.params.id
 
     Person.findByIdAndRemove(id)
-        .then(result => {
+        .then(() => {
             response.status(204).send()
         })
         .catch(error => next(error))
