@@ -1,32 +1,12 @@
-const { request, response } = require('express')
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const logger = require('morgan')
 const cors = require('cors')
-const PORT = process.env.PORT || 3001
+const Person = require('./models/Person')
+const PORT = process.env.PORT
 
-let persons = [
-    {
-      "id": 1,
-      "name": "Arto Hellas",
-      "number": "040-123456"
-    },
-    {
-      "id": 2,
-      "name": "Ada Lovelace",
-      "number": "39-44-5323523"
-    },
-    {
-      "id": 3,
-      "name": "Dan Abramov",
-      "number": "12-43-234345"
-    },
-    {
-      "id": 4,
-      "name": "Mary Poppendieck",
-      "number": "39-23-6423122"
-    }
-]
+
 app.use(cors())
 app.use(express.json())
 app.use(logger('dev'))
@@ -37,96 +17,100 @@ const unknownPage = (req, res, next) => {
     )
 }
 
-function findPerson(request) {
-    const id = Number(request.params.id)
+const errorHandler = (error, request, response, next) => {
+    console.log(error)
 
-    const person = persons.find( person => person.id === id)
+    if(error.name === 'CastError'){
+        return response.status(400).json({
+            error : "malformatted Id"
+        })
+    } else if(error.name === 'ValidationError') {
+        return response.status(400).json({error : error.message})
+    }
 
-    return person
+    next(error)
 }
 
-function generateId() {
-    const max_id = Math.floor(Math.random * 1000)
-
-    const id = max_id + 1;
-
-    return id;
-}
-
-function findPersonbyName(name) {
-    return persons.find(person => person.name === name)
-}
-function removePersonFromList(person) {
-    persons = persons.filter(each => each.id !== person.id)
-}
 
 app.get('/api/persons', (request, response, next) => {
-    return response.json(persons)
+    Person.find({})
+    .then(result => {
+        return response.json(result)
+    })
+
 })
 
 app.get('/api/info', (request, response, next) => {
-    const res = `Phonebook has info for ${persons.length} people` + '\n ' + new Date()
+    const res = `Phonebook has info for people` + '\n ' + new Date()
     response.send(res);
 })
 
 app.get('/api/persons/:id', (request, response, next) => {
 
-    const person  = findPerson(request)
-
-    if(person) {
-        response.json(person)
-    } else {
-        response.status(404).send()
-    }
+    Person.findById(request.params.id)
+        .then(result => {
+            if(result){
+                response.send(result)
+            } else {
+                response.status(404).send()
+            }
+        })
+        .catch(error => next(error))
 })
 
 app.post('/api/persons', (request, response, next) => {
 
-    const id = generateId()
-
     const body = request.body
 
-    if(body.name && body.number) {
-        const person = findPersonbyName(body.name)
+    const person = new Person({
+        name : body.name,
+        number : body.number
+    })
 
-        if(person) {
-            response.status(400).json(
-                { error : `person ${person.name} already exists in phonebook`}
-            )
-        }
-        // person creation logic should not be in this method
-        const newPerson = {
-            id : id,
-            name : body.name,
-            number : body.number
-        }
+    person.save()
+        .then(savedPerson => {
+            response.status(201).send(savedPerson)
+        })
+        .catch(error => next(error))
 
-        persons.push(newPerson)
+})
 
-        response.status(201).send()
-    } else {
-        response.status(400).json(
-            {error : "missing body or number"}
-        )
+app.put('/api/persons/:id', (request, response, next) => {
+
+    const person = {
+        name : request.body.name,
+        number : request.body.number
     }
-
-
+    Person.findByIdAndUpdate(
+        request.params.id,
+        person,
+        {new : true})
+        .then(result => {
+            if(result){
+                response.json(result)
+            } else {
+                response.status(404).end()
+            }
+        })
+        .catch(error => {
+            next(error)
+        })
 
 })
 
 app.delete('/api/persons/:id', (request, response, next) => {
-    const person = findPerson(request)
+    const id = request.params.id
 
-    if(person){
-        removePersonFromList(person)
-
-        response.status(204).send()
-    } else {
-        response.status(404).send()
-    }
+    Person.findByIdAndRemove(id)
+        .then(result => {
+            response.status(204).send()
+        })
+        .catch(error => next(error))
 })
 
 app.use(unknownPage)
+
+app.use(errorHandler)
 
 app.listen(PORT, () => {
     console.log(`Listening on port: ${PORT}`)
